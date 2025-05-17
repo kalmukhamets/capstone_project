@@ -1,33 +1,42 @@
-import streamlit as st
 import joblib
 import pandas as pd
+import streamlit as st
 
-# Load model
-model = joblib.load("xgb_model.pkl")
+model = joblib.load('model_pipeline.pkl')
 
-st.title("Car Price Predictor")
+# UI
+brand = st.text_input("Brand")
+model_car = st.text_input("Model")
+city = st.text_input("City")
+year = st.number_input("Year", 1990, 2025)
+engine = st.number_input("Engine Size (L)", 0.5, 6.0)
+mileage = st.number_input("Mileage", 0)
 
-# Input fields
-brand = st.text_input("Бренд")
-model_car = st.text_input("Модель")
-year = st.number_input("Год", 1990, 2025)
+# other categorical fields
+body = st.text_input("Body")
+transmission = st.text_input("Transmission")
+wheel = st.text_input("Wheel")
+color = st.text_input("Color")
+drive = st.text_input("Drive")
+customs = st.text_input("CustomsCleared")
+fuel = st.text_input("FuelType")
 
-# Example features dict – adjust as per your training features
 if st.button("Predict Price"):
-    input_data = pd.DataFrame([{
-        "Brand": brand,
-        "Model": model_car,
-        "Year": year,
+    input_df = pd.DataFrame([{
+        'Brand': brand,
+        'Model': model_car,
+        'City': city,
+        'Year': year,
+        'EngineSize': engine,
+        'Mileage': mileage,
+        'Body': body,
+        'Transmission': transmission,
+        'Wheel': wheel,
+        'Color': color,
+        'Drive': drive,
+        'CustomsCleared': customs,
+        'FuelType': fuel
     }])
-
-    # Make sure to preprocess the input the same way as training
-    # input_data = preprocess(input_data)  # Optional
-
-from sklearn.preprocessing import LabelEncoder
-
-le = LabelEncoder()
-input_data['Бренд'] = le.fit_transform(input_data['Бренд'])
-input_data['Модель'] = le.fit_transform(input_data['Модель'])
-
-    prediction = model.predict(input_data)[0]
+    
+    prediction = model.predict(input_df)[0]
     st.success(f"Estimated Price: {int(prediction):,} Tenge")
