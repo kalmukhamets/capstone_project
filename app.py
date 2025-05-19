@@ -75,20 +75,8 @@ if st.button("Predict Price"):
 
         conn = psycopg2.connect(os.environ['postgresql://neondb_owner:npg_Mke3v1tQcoAg@ep-morning-surf-a8bcjk1b-pooler.eastus2.azure.neon.tech/neondb?sslmode=require'])
         cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS feedback (
-                id SERIAL PRIMARY KEY,
-                brand TEXT,
-                model TEXT,
-                prediction FLOAT,
-                feedback TEXT,
-                comment TEXT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        conn.commit()
 
-        cur.execute("INSERT INTO feedback (brand, model, prediction, feedback, comment) VALUES (%s, %s, %s, %s, %s)",
+        cur.execute("INSERT INTO public.feedback (brand, model, prediction, feedback, comment) VALUES (%s, %s, %s, %s, %s)",
                     (brand, model_car, prediction, feedback, comment))
         conn.commit()
         st.success("✅ Feedback submitted. Thank you!")
