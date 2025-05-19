@@ -1,10 +1,13 @@
 import joblib
 import pandas as pd
 import streamlit as st
+import psycopg2
+import os
 
+# Load model pipeline (make sure 'model_pipeline.pkl' is in the same directory)
 model = joblib.load('model_pipeline.pkl')  # pipeline includes encoder + model
 
-st.title("Car Price Predictor")
+st.title("🚗 Car Price Predictor")
 
 # --- User Inputs ---
 brand = st.text_input("Brand")
@@ -25,9 +28,8 @@ fuel = st.text_input("FuelType")
 # --- Feature Engineering ---
 current_year = 2025
 car_age = current_year - year
-mileage_per_year = mileage / car_age if car_age > 0 else mileage  # prevent division by zero
+mileage_per_year = mileage / car_age if car_age > 0 else mileage
 
-# Luxury brand flag
 luxury_brands = ['BMW', 'Audi', 'Lexus', 'Mercedes-Benz', 'Porsche']
 is_luxury = 1 if brand in luxury_brands else 0
 
@@ -51,33 +53,52 @@ input_df = pd.DataFrame([{
     'IsLuxuryBrand': is_luxury
 }])
 
-#Prediction
-if st.button("Predict Price"):
-    prediction = model.predict(input_df)[0]
-    st.success(f"Estimated Price: {int(prediction):,} Tenge")
+# --- Prediction ---
+if st.button("🔮 Predict Price"):
+    try:
+        prediction = model.predict(input_df)[0]
+        st.success(f"💰 Estimated Price: {int(prediction):,} Tenge")
 
-    # Show feedback form here
-    st.subheader("Was this prediction accurate?")
-    feedback = st.radio("Your opinion:", ["Too high", "Too low", "Reasonable"])
-    comment = st.text_area("Additional comments (optional)")
+        # --- Feedback Form ---
+        st.subheader("Was this prediction accurate?")
+        feedback = st.radio("Your opinion:", ["Too high", "Too low", "Reasonable"])
+        comment = st.text_area("Additional comments (optional)")
 
-    if st.button("Submit Feedback"):
-        feedback_data = pd.DataFrame([{
-            'Brand': brand,
-            'Model': model_car,
-            'Prediction': prediction,
-            'Feedback': feedback,
-            'Comment': comment
-        }])
+        if st.button("Submit Feedback"):
+            try:
+                # Connect to PostgreSQL (You can replace this with your environment variable if preferred)
+                conn = psycopg2.connect(
+                    "postgresql://neondb_owner:npg_Mke3v1tQcoAg@ep-morning-surf-a8bcjk1b-pooler.eastus2.azure.neon.tech/neondb?sslmode=require"
+                )
+                cur = conn.cursor()
 
-        import psycopg2
-        import os
+                # Ensure feedback table exists
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS public.feedback (
+                        id SERIAL PRIMARY KEY,
+                        brand TEXT,
+                        model TEXT,
+                        prediction FLOAT,
+                        feedback TEXT,
+                        comment TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                conn.commit()
 
-        conn = psycopg2.connect(os.environ['postgresql://neondb_owner:npg_Mke3v1tQcoAg@ep-morning-surf-a8bcjk1b-pooler.eastus2.azure.neon.tech/neondb?sslmode=require'])
-        cur = conn.cursor()
+                # Insert feedback
+                cur.execute("""
+                    INSERT INTO public.feedback (brand, model, prediction, feedback, comment)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (brand, model_car, prediction, feedback, comment))
+                conn.commit()
 
-        cur.execute("INSERT INTO public.feedback (brand, model, prediction, feedback, comment) VALUES (%s, %s, %s, %s, %s)",
-                    (brand, model_car, prediction, feedback, comment))
-        conn.commit()
-        st.success("✅ Feedback submitted. Thank you!")
+                st.success("✅ Feedback submitted. Thank you!")
+            except Exception as e:
+                st.error(f"❌ Failed to submit feedback: {e}")
+            finally:
+                if 'conn' in locals():
+                    conn.close()
 
+    except Exception as e:
+        st.error(f"❌ Prediction failed: {e}")
