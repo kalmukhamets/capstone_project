@@ -73,7 +73,7 @@ if st.button("Predict Price"):
         import psycopg2
         import os
 
-        conn = psycopg2.connect(os.environ['postgresql://capstone_db_4a21_user:gS3smiJzeMgiZlea4mqdu1LPHbitcLrZ@dpg-d0lfr6juibrs73a9guk0-a.oregon-postgres.render.com/capstone_db_4a21'])
+        conn = psycopg2.connect(os.environ['postgresql://neondb_owner:npg_Mke3v1tQcoAg@ep-morning-surf-a8bcjk1b-pooler.eastus2.azure.neon.tech/neondb?sslmode=require'])
         cur = conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS feedback (
