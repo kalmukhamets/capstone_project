@@ -51,8 +51,45 @@ input_df = pd.DataFrame([{
     'IsLuxuryBrand': is_luxury
 }])
 
-
-# --- Prediction ---
+#Prediction
 if st.button("Predict Price"):
     prediction = model.predict(input_df)[0]
     st.success(f"Estimated Price: {int(prediction):,} Tenge")
+
+    # Show feedback form here
+    st.subheader("Was this prediction accurate?")
+    feedback = st.radio("Your opinion:", ["Too high", "Too low", "Reasonable"])
+    comment = st.text_area("Additional comments (optional)")
+
+    if st.button("Submit Feedback"):
+        feedback_data = pd.DataFrame([{
+            'Brand': brand,
+            'Model': model_car,
+            'Prediction': prediction,
+            'Feedback': feedback,
+            'Comment': comment
+        }])
+
+        import psycopg2
+        import os
+
+        conn = psycopg2.connect(os.environ['postgresql://capstone_db_4a21_user:gS3smiJzeMgiZlea4mqdu1LPHbitcLrZ@dpg-d0lfr6juibrs73a9guk0-a.oregon-postgres.render.com/capstone_db_4a21'])
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS feedback (
+                id SERIAL PRIMARY KEY,
+                brand TEXT,
+                model TEXT,
+                prediction FLOAT,
+                feedback TEXT,
+                comment TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+
+        cur.execute("INSERT INTO feedback (brand, model, prediction, feedback, comment) VALUES (%s, %s, %s, %s, %s)",
+                    (brand, model_car, prediction, feedback, comment))
+        conn.commit()
+        st.success("✅ Feedback submitted. Thank you!")
+
